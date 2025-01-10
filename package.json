@@ -1,0 +1,19 @@
+{
+  "name": "devconnect",
+  "version": "1.0.0",
+  "description": "connection for dev",
+  "main": "index.js",
+  "scripts": {
+    "test": " "
+  },
+  "keywords": [
+    "node",
+    "js",
+    "javascript"
+  ],
+  "author": "siva mule",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
