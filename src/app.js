@@ -1,26 +1,58 @@
-
 const express = require('express')
-
 const connectDB = require("./config/database");
-
+const { validateSignUpData } = require('./utils/validation');
 const app = express();
-
+const bcrypt = require('bcrypt');
 const User = require("./models/user");
-
 app.use(express.json());
 
 // post API
+
 app.post('/signup', async (req, res) => {
-    //creating new instance for user model
-    const user = new User(req.body);
+    // validation of data
+
     try {
+        validateSignUpData(req);
+        const { firstName, secondName, email, password } = req.body
+
+        // encrypt the password
+
+        const passordHash = await bcrypt.hash(password, 10);
+
+        //creating new instance for user model
+
+        const user = new User({
+            firstName,
+            secondName,
+            email,
+            password: passordHash
+        });
+
         await user.save();
         res.send('user details added sucessfully')
     } catch (err) {
-        res.status(400).send('Error saving the user:' + err.message)
+        res.status(400).send('ERROR: ' + err.message)
     }
 });
 
+// login API
+app.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body
+        const user = await User.findOne({ emailID: email });
+        if (!user) {
+            throw new Error('invalid data');
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            res.send('login successful')
+        } else {
+            throw new Error('invalid data');
+        }
+    } catch (err) {
+        res.status(400).send('ERROR:' + err.message);
+    }
+})
 
 // Feed API - GET /feed -- get alla the users from the database
 //    get user email
@@ -98,7 +130,6 @@ app.patch("/user", async (req, res) => {
     }
 })
 
-
 connectDB()
     .then(() => {
         console.log('db connected')
@@ -109,6 +140,3 @@ connectDB()
     .catch((err) => {
         console.error('db not connected')
     });
-
-
-
