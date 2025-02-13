@@ -2,9 +2,13 @@ const express = require('express')
 const connectDB = require("./config/database");
 const { validateSignUpData } = require('./utils/validation');
 const app = express();
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require("./models/user");
+const { userAuth } = require('./midlewares/auth');
 app.use(express.json());
+app.use(cookieParser());
 
 // post API
 
@@ -13,19 +17,19 @@ app.post('/signup', async (req, res) => {
 
     try {
         validateSignUpData(req);
-        const { firstName, secondName, email, password } = req.body
+        const { firstName, secondName, email, password } = req.body;
 
         // encrypt the password
 
-        const passordHash = await bcrypt.hash(password, 10);
-
+        const passwordHash = await bcrypt.hash(password, 10);
         //creating new instance for user model
 
         const user = new User({
             firstName,
             secondName,
             email,
-            password: passordHash
+            password: passwordHash,
+
         });
 
         await user.save();
@@ -36,21 +40,41 @@ app.post('/signup', async (req, res) => {
 });
 
 // login API
+
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body
-        const user = await User.findOne({ emailID: email });
+        const user = await User.findOne({ email: email });
         if (!user) {
             throw new Error('invalid data');
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
+
+            // create a JWT token
+            const token = await jwt.sign({ _id: user._id }, 'developer$234')
+
+            // add the token to cookie and send response to the user
+            res.cookie("token", token);
             res.send('login successful')
         } else {
             throw new Error('invalid data');
         }
     } catch (err) {
         res.status(400).send('ERROR:' + err.message);
+    }
+})
+
+// profile API
+
+app.get('/profile', userAuth, async (req, res) => {
+
+    // validate my token
+    try {
+        const user = req.user;
+        res.send(user); 
+    } catch (err) {
+        res.status(400).send('ERROR:', err.message);
     }
 })
 
