@@ -46,14 +46,11 @@ app.post('/login', async (req, res) => {
         const { email, password } = req.body
         const user = await User.findOne({ email: email });
         if (!user) {
-            throw new Error('invalid data');
+            throw new Error('invalid ');
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-
-            // create a JWT token
-            const token = await jwt.sign({ _id: user._id }, 'developer$234')
-
+        const isPasswordValid = await user.validatePassword(password)
+        if (isPasswordValid) {
+            const token = await user.getJWT();
             // add the token to cookie and send response to the user
             res.cookie("token", token);
             res.send('login successful')
@@ -72,87 +69,18 @@ app.get('/profile', userAuth, async (req, res) => {
     // validate my token
     try {
         const user = req.user;
-        res.send(user); 
+        res.send(user);
     } catch (err) {
         res.status(400).send('ERROR:', err.message);
     }
 })
 
-// Feed API - GET /feed -- get alla the users from the database
-//    get user email
-
-app.get("/user", async (req, res) => {
-    const userEmail = req.body.email;
-    try {
-        const user = await User.findOne();
-        if (!user) {
-            res.status(404).send('user not found');
-        } else {
-            res.send(user);
-        }
-    } catch (err) {
-        res.status(400).send('something went wrong')
-    }
-    try {
-        const user = await User.find({ email: userEmail })
-        if (user.length === 0) {
-            res.status(404).send('user not found')
-        } else {
-            res.send(user)
-        }
-    } catch (err) {
-        res.status(400).send('something went wrong')
-    }
+app.post('/sendconnectionrequest', userAuth, async (req, res) => {
+    const user = req.user;
+    console.log('sending request')
+    res.send(user.secondName+'send')
 })
 
-// delete API
-
-app.delete("/user", async (req, res) => {
-    const userID = req.body.userID;
-    try {
-        const user = await User.findByIdAndDelete(userID)
-        res.send('user deleted successfully')
-    } catch (err) {
-        res.status(400).send('something went wrong')
-    }
-})
-
-// patch APPI
-
-app.patch("/user", async (req, res) => {
-    const userID = req.body.userID;
-    const data = req.body;
-    try {
-        const ALLOWED_UPDATES = [
-            "firstName",
-            "secondName",
-            "password",
-            "age",
-            "gender",
-            "photoUrl",
-            "about",
-            "skills"
-        ];
-        const isUpdateAllowed = Object.keys(data).every((k) =>
-            ALLOWED_UPDATES.includes(k)
-        );
-        if (!isUpdateAllowed) {
-            throw new Error("update not valid")
-        }
-        if (data?.skills.length > 10) {
-            throw new Error('skills cant be more than 10')
-        }
-        await User.findByIdAndUpdate({ _id: userID }, data, {
-            returnDocument: "after",
-            runValidators: true,
-        })
-
-        res.send('user details updated sucessfully')
-    } catch (err) {
-        res.status(400).send('UPDATE FAILED:' + err.message)
-
-    }
-})
 
 connectDB()
     .then(() => {
